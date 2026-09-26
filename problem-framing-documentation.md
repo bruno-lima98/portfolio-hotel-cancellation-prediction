@@ -108,7 +108,10 @@ Dessa forma, a principal atuação resultante da aplicação do modelo é a tent
 |
 
 - custo de contato = USD 20.000 / 50.000 cliente = USD 0.40 /cliente
-- valor de desconto = USD 150 x 25 % = USD 37.5 / cliente
-- valor perdido da reserva (cancelamento prévio) = USD 150 x 50% = USD 75 / reserva
-- valor perdido da reserva (não comparecimento) = USD 150 x 50% = USD 150 / reserva
+- valor de desconto = USD 150 x 25% x 3 = USD 112.50 / cliente
+- valor perdido da reserva (cancelamento prévio) = USD 150 x 50% x 3 = USD 225.00 / reserva
+- valor perdido da reserva (não comparecimento) = USD 150 x 100% x 3 = USD 450.00 / reserva
+- valor perdido da reserva (médio) = (USD 225 x 36 + USD 450 x 1) / 37 = USD 231.01 / reserva
+- retorno da reserva convertida (não comparecimento) = 5% x 225 = USD 11.25
+- retorno da reserva convertida (cancelamento prévio) = 5% x 450 = USD 22.50
 
