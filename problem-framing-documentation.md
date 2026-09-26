@@ -32,7 +32,7 @@ Para o problema atual, não existe nenhum tipo de estratégica especifica para t
 
 - Unidade de medida: reservas de quarto de Hotel.
 - Total de reservas: 119.390.
-- Taxa de cancelamento: 37.0%.
+- Taxa de cancelamento: 37.0% (36% de cancelamento prévio + 1% não comparecimento)
 - Data de coleta: 2014-10 até 2017-09 (35 meses).
 - Estão presentes no dataset todas as reservas realizadas dentro do período, incluindo as efetivadas ou canceladas.
 
@@ -48,15 +48,38 @@ Como a redução dos cancelamentos a partir de estratégias de contenção é o 
 
 #### 5.1. O Problema Atual
 
-O custo hoje médio de uma reserva realizada na redes de hotéis é USD 150 a diária e com uma locação de período médio de 3 dias, de forma que podemos extraploar para o valor total não convertido no período:
+O custo hoje médio de uma reserva realizada na redes de hotéis é USD 150 a diária e com uma locação de período médio de 3 dias, de forma que podemos extraploar para o valor total não convertido no período.
+
+Além disso, temos uma diferenciação entre cancelamento prévio e não comparecimento e cancelamento da reserva de última momento. Para simplificação foi utilizado:
+- Cancelamento prévio: 50% de custo.
+- Não comparecimento: 100% de custo.
 
 <p align="center">
 
-$$119.390 \times 37\% \times 150 \times 3 = \text{USD } 19.878\text{ M}$$
+$$
+(119.390 \times 36\%) \times (150 \times 50\%) \times 3
+= \text{USD 9.671 M}
+\quad \text{[cancelamento prévio]}
+$$
+
+$$
+(119.390 \times 1\%) \times (150 \times 100\%) \times 3
+= \text{USD 0.537 M}
+\quad \text{[não comparecimento]}
+$$
+
+$$
+\text{Anualizado}
+=
+\frac{\text{USD 9.671 M} + \text{USD 0.537 M}}{35}
+\times 12
+=
+\text{USD 3.499 M/ano}
+$$
 
 </p>
 
-No entanto é importante observar que uma reserva cancelada impossibilita uma outra reserva (que poderia ser convertida) de acontecer. Isso acaba se tornando um valor não convertido, pois o fato de uma reserva ser realizada, ela trava a locaçã o do quarto até o momento de cancelamento.
+No entanto é importante observar que uma reserva cancelada impossibilita uma outra reserva (que poderia ser convertida) de acontecer. Isso acaba se tornando um valor não convertido, pois o fato de uma reserva ser realizada, ela trava a locação do quarto até o momento de cancelamento.
 
 #### 5.2. Estratégias de Contenção
 
@@ -64,10 +87,28 @@ Mesmo que o modelo indique a possibilidade de cancelamento de forma extremamente
 
 Dessa forma, a principal atuação resultante da aplicação do modelo é a tentativa de reverter uma cancelamento (impedir que não ocorra) através de estratégias de marketing e descontos direcionais.
 
-- Custo de uma campanha de marketingmédia = USD 20.000.
-- Clientes afetados = 50.000.
-- Taxa de conversão média = 5%.
-- Faixas de desconto = 5%, 10%, 20%, 50%.
+- **Campanha de Marketing:**
+    - Custo de uma campanha média = USD 20.000.
+    - Clientes afetados = 50.000 por campanha.
+    - Taxa de conversão média esperada = 5%.
+- **Campanha de Desconto:**
+    - Desconto médio por campanha = 25%.
+    - Taxa de conversão média esperada = 5%.
 
 #### 5.3. Custos de Falsos-Negativos e Falsos-Positivos
+
+É importante definir os valores de cada apontamento errado e certo do modelo, onde é utilizado o conceito de matriz de confusão para definir os valores.
+
+| Situação            | Detalhe                                   | Custo | 
+|---------------------|-------------------------------------------|-------| 
+| Falso Positivo      | Atuação no cliente de forma equivocada    | custo de contato + valor de desconto
+| Falso Negativo      | Cliente perdido sem tentativa de reversão | valor perdido da reserva
+| Verdadeiro Positivo | Atuação no cliente de forma acertada      | custo de contato + valor de desconto - retorno
+| Verdadeiro Negativo | Cliente normal - baseline                 | - 
+|
+
+- custo de contato = USD 20.000 / 50.000 cliente = USD 0.40 /cliente
+- valor de desconto = USD 150 x 25 % = USD 37.5 / cliente
+- valor perdido da reserva (cancelamento prévio) = USD 150 x 50% = USD 75 / reserva
+- valor perdido da reserva (não comparecimento) = USD 150 x 50% = USD 150 / reserva
 
