@@ -26,3 +26,47 @@ O primeiro passo da metodologia adota é a criação de um Problem Framing Docum
 
 Para se manter fiel ao passo a passo dessa metodologia, criou-se o documento **problem-framing-documentation.md**, onde foi estruturado as respostas dessas perguntas seguindo o passo a passo.
 
+## 2 - Coleta dos Dados
+
+Os dados coletados são de uma base sintética no Kaggle. Dessa forma a questão de disponibilidade e verificação não cosnegue ser validada. Aqui separei a estrutura do dataset e colunas.
+
+- **Link:** [Hotel Booking Dataset](https://www.kaggle.com/datasets/saadharoon27/hotel-booking-dataset)
+- **Total de elementos:** 119.390.
+- **Taxa de cancelamento:** 37.0% 
+
+
+| Coluna                         | Descrição |
+|--------------------------------|----------------------------------------------| 
+| hotel                          | Tipo do hotel (cidade, resort)
+| lead_time                      | Tempo entre reserva chegada
+| arrival_date_year              | Ano da chegada
+| arrival_date_month             | Mês da chegada
+| arrival_date_week_number       | Número da semana da chegada
+| arrival_date_day_of_month      | Dia do Mês da chegada
+| stays_in_weekend_nights        | Número de dias do final de semana da reserva
+| stays_in_week_nights           | Número de dias de semana da reserva
+| adults                         | Número de adultos
+| children                       | Número de crianças
+| babies                         | Número de bebês
+| meal                           | Tipo de refeição reservada
+| country                        | País de origem
+| market_segment                 | Designação de segmento de mercado
+| distribution_channel           | Canal de distribuição da reserva
+| is_repeated_guest              | É cliente repetido
+| previous_cancellations         | Quantidade de reservas canceladas antes
+| previous_bookings_not_canceled | Quantidade de reservar não canceladas antes
+| reserved_room_type             | Tipo do quarto da reserva
+| assigned_room_type             | Tipo do quarto designado no check-in
+| booking_changes                | Número de mudanças feitas na reserva
+| deposit_type                   | Tipo de depósito
+| agent                          | ID da agência de viagem
+| company                        | ID da companhia
+| days_in_waiting_list           | Dias na lista de espera antes do agendamento
+| customer_type                  | Tipo de reserva
+| adr                            | Tarifa diária média
+| required_car_parking_spaces    | Número de espaços para estacionamento
+| total_of_special_requests      | Número de pedidos especias requisitados
+| reservation_status             | Último status da reserva
+| reservation_status_date        | Data do último status
+| is_canceled                    | Target: indica se foi ou não cancelado
+|
