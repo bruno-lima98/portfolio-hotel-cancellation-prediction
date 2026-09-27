@@ -69,4 +69,59 @@ Os dados coletados são de uma base sintética no Kaggle. Dessa forma a questão
 | reservation_status             | Último status da reserva
 | reservation_status_date        | Data do último status
 | is_canceled                    | Target: indica se foi ou não cancelado
-|
+
+# 3. Qualidade e Limpeza de Dados
+
+### 3.1. Checagem Inicial
+
+Fizemos alguns checks iniciais para validar o dataset.
+
+- **Checagem do target:** validação da coluna `is_canceled`:
+    - Não possui valores nulos.
+    - Não houve mudanças sobre sua definição ao longo do tempo, sendo apenas a informação de cancealamento ou não da reserva.
+    - Temos uma proporção entre 1/0 de 37.04% (44.224 eventos positivos).
+- **Tipos das colunas:** foi realizado a conferência da tipagem das colunas, sendo necessário 3 mudanças:
+    - `agent`: representa as agências de viagem, como é anonimizado por número, estava como numérica -> convertida para str.
+    - `company`: representa as companhias/empresas, como é anonimizado por número, estava como numérica -> convertida para str
+- **Normalização de colunas:** todas as colunas passaram por normalização textual e todas as colunas str tiveram seus valores normalizados.
+
+### 3.2. Valores Nulos
+
+Foi avaliado a presença de valores Nulos nas colunas do dataset para tentar entender qual seria a estratégia para cada caso e como resolver. Dessa forma obteve-se 4 colunas:
+
+- `children`: possui 4 nulos (0.003%). Como o percentual é muito baixo, optou-se pela estratégia simples de imputar a Moda do dataset nesses pontos.
+- `country`: possui 488 nulos (0.41%). Como é uma informação categórica a respeito do país de onde quem marcou a reserva vem, optou-se por imputar "unknown", trazendo algo sobre essa informação.
+- `agent`: possui 16.340 nulos (13.69%). Como isso tem de fato um significado, onde não houve intermédio de agências de viagem, colocou-se "no_agency".
+- `company`: possui 112.593 nulos (94.31%). Como isso tem de fato um significado, onde não é uma empresa fazendo a reserva, colocou-se "no_company".
+
+### 3.3. Outliers
+
+Foi verificado a questão de outliers de forma simples utilizando describe(), para trazer pontos fora do esperado para uma investigação mais completa. Nesse primeiro momento houve apenas um ponto de atenção:
+
+`adr`: essa coluna possui informações a respeito de tarifas diárias. No entanto ela aparece com dos pontos de atenção:
+    - Valor negativo: aparece -6,38 como valor mínimo.
+    - Valor muito alto: aparece 5.400 como valor máximo.
+
+[HIST]
+
+Ao olharmos o histograma, percebemos que não são valores dentro do esperado. 
+
+O valor negativo se encontra apenas em 1 único evento, sugerindo que pode ter sido algum problema de imputação. O valor de 5.400 aparenta também ser algum tipo de erro de digitação, pelo fato de ser um caso isolado, 10x maior que o 2º maior valor de ~500. Ao removermos esse valor do plot temos algo muito mais factivel.
+
+Dessa forma a estratégia adotada:
+- Valor negativo: imputamos manualmente 0.
+- Valor elevado: 
+
+`adults`: essa coluna informa sobre o total de adultos na reserva. No entanto ela aparece com um ponto de atenção:
+    - Valor muito alto: aparece 55 como valor máximo.
+    - Valor 0: aparece alguns casos com 0 adultos na reserva.
+
+[HIST]
+
+Ao olharmos o histograma, percebemos que a concentração de valores está entre 1 e 5, o que de fato faz muito mas sentido. Os valores muito elevados não fazem muito sentido pensando em uma reserva de hotel, sendo que acima de 5 pessoas, temos apenas 14 eventos. Para os valores de 0 pessoas adultas, também é estranho, mesmo que tenhamos um total de 403 linhas.
+
+Dessa forma a estratégia adotada:
+- Valor elevado: 
+- Valor 0: 
+
+Dentro dessa questão ainda surgiu mais uma verificação, reservas que constam com 0 pessoas (adults + children + babies).
