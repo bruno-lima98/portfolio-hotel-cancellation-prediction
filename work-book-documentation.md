@@ -151,3 +151,22 @@ No dataset atual, não há um problema em relação ao balanceamento que precise
 
 Ao se fazer uma análise das informações disponíveis no dataset, duas colunas tiveram que ser descartadas:
 - `reservation_status` e `reservation_status_date`: elas refletem o real status da reserva e o momento de atualização do último status. No entanto são informações que não estão "disponíveis" no momento da reserva, elas são resultado diretamtente do nosso target `is_canceled`.
+
+# 4. Split no Dataset
+
+Antes de entrarmos de fato da EDA, vamos fazer o split do dataset, pois a nossa fold de Test não pode ser utilizado para nenhum tipo de tomada de decisão, ficando em total isolamento das análises e tomadas de decisão a partir de agora. Dessa forma estudou-se a melhor maneira de fazer o split.
+
+Pensando em um dataset temporal, com reservas monitoradas em um período de 35 meses, a estratégia de OOT ganha um grande valor aqui, com treino no passado para previsões futuras. A questão que gira em torno dessa estratégia é a data de base para os splits, pois há a data de chegada mas não há a data de realização da reserva, de forma que precisaremos obter isso a partir das informações diponiveis.
+
+Como sempre existe a informação de `lead_time` e `arrival_date`, podemos utiliza-las para encontrar a data de realização de reserva, que de fato é a data utilizada para um split temporal nesse dataset. Dessa forma podemos avaliar a taxa de cancelamento pela data do booking:
+
+<p align="center">
+  <img src="images/section_03_histogram_04_booking_date_cancellation_volume.jpeg" width="600">
+</p>
+
+Percebemos que há um problema em utilizar isso diretamente. O fato da coleta dos dados não ter utilizado a data de booking como parâmetro de corte gera uma distorção quando observamos as datas. Antes de 2015 temos casos esporádicos de reservas sendo realizadas, com um pico estranho em Out/24. Ao observarmos a taxa de cancelamento dessas reservas em relação ao resto do dataset temos:
+- **Taxa de cancelamento (antes de 2015)**: 90.16% [2623 eventos].
+- **Taxa de cancelamento (pós 2015):** 35.87%.
+
+Dessa forma, optou-se pela remoção das reservas antes de 2015 para evitar a distorção gerada por essa coleta indevida, uma vez que esses eventos só entraram no dataset por terem um lead_time muito elevado, causando essa distorção de 90% de cancelamnto.
+
