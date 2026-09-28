@@ -161,7 +161,7 @@ Pensando em um dataset temporal, com reservas monitoradas em um período de 35 m
 Como sempre existe a informação de `lead_time` e `arrival_date`, podemos utiliza-las para encontrar a data de realização de reserva, que de fato é a data utilizada para um split temporal nesse dataset. Dessa forma podemos avaliar a taxa de cancelamento pela data do booking:
 
 <p align="center">
-  <img src="images/section_03_histogram_04_booking_date_cancellation_volume.jpeg" width="600">
+  <img src="images/section_03_graph_04_booking_date_cancellation_volume.jpeg" width="600">
 </p>
 
 Percebemos que há um problema em utilizar isso diretamente. O fato da coleta dos dados não ter utilizado a data de booking como parâmetro de corte gera uma distorção quando observamos as datas. Antes de 2015 temos casos esporádicos de reservas sendo realizadas, com um pico estranho em Out/24. Ao observarmos a taxa de cancelamento dessas reservas em relação ao resto do dataset temos:
@@ -169,4 +169,39 @@ Percebemos que há um problema em utilizar isso diretamente. O fato da coleta do
 - **Taxa de cancelamento (pós 2015):** 35.87%.
 
 Dessa forma, optou-se pela remoção das reservas antes de 2015 para evitar a distorção gerada por essa coleta indevida, uma vez que esses eventos só entraram no dataset por terem um lead_time muito elevado, causando essa distorção de 90% de cancelamnto.
+
+Além disso, uma das questões apontadas anteriormente foi a quatidade de duplicatas do dataset. No entanto, uma vez que a verificação de duplicatas foi realizada sem utilizar um subset específico, as datas e lead_time que resultam `booking_date` são sempre iguais, fazendo que cortes temporais no dataset sempre garantam que as duplicatas caiam no mesmo fold, evitando vazamento por duplicatas.
+
+<p align="center">
+  <img src="images/section_03_graph_05_booking_date_cancellation_volume_right.jpeg" width="600">
+</p>
+
+Outro ponto de atenção que foi observado é a questão da ponta direita do dataset (`booking_date` mais recente) para validar a questão se não há um problema de viés de `lead_time` muito baixo, ou seja, uma taxa de cancelamento menor nesses casos. Já foi perceptivel no gráfico anterior uma tendência de queda, e quando damos um zoom-in claramente temos um valor muito inferior na ponta direita.
+
+Com isso definiu-se um range para o dataset fechado para remoção dos ruídos: `2015-01-01` até `2017-06-30`, com uma distribuição dada por:
+
+<p align="center">
+  <img src="images/section_03_graph_06_arrival_date_cancellation_final_volume.jpeg" width="600">
+</p>
+
+## 4.1. OOT
+
+Após todas as considerações é necessário aplicar de fato a técnica de Out of Time no dataet, onde iremos separar um parte dos dados mais recentes com o dataste de Teste, enquanto o restante se torna o dataset de treino/validação, onde iremos rodar Cross-Validation utilizando recortes temporais.
+
+- **cutoff entre Treino / Teste =** `2017-01-01`
+
+- **Treino:**
+    - data ínicio = `2015-01-01`.
+    - data final = `2016-12-31`.
+    - tamanho dataset = 89.858 eventos.
+    - percentual da base = 78.63%.
+    - taxa de cancelamento = 37.11%
+
+- **Teste:**
+    - data ínicio = `2017-01-01`.
+    - data final = `2017-06-30`.
+    - tamanho dataset = 24.427 eventos.
+    - percentual da base = 21.37%.
+    - taxa de cancelamento = 32.41%
+
 
