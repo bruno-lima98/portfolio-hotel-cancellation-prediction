@@ -30,7 +30,7 @@ Para se manter fiel ao passo a passo dessa metodologia, criou-se o documento **p
 
 Os dados coletados são de uma base sintética no Kaggle. Dessa forma a questão de disponibilidade e verificação não cosnegue ser validada. Aqui separei a estrutura do dataset e colunas.
 
-- **Link:** [Hotel Booking Dataset](https://www.kaggle.com/datasets/saadharoon27/hotel-booking-dataset)
+- **Link:** [Hotel Booking Dataset](https://www.kaggle.com/datasets/jessemostipak/hotel-booking-demand)
 - **Total de elementos:** 119.390.
 - **Taxa de cancelamento:** 37.0% 
 
@@ -85,7 +85,19 @@ Fizemos alguns checks iniciais para validar o dataset.
     - `company`: representa as companhias/empresas, como é anonimizado por número, estava como numérica -> convertida para str
 - **Normalização de colunas:** todas as colunas passaram por normalização textual e todas as colunas str tiveram seus valores normalizados.
 
-### 3.2. Valores Nulos
+### 3.2. Valores duplicados
+
+Ao se verificar o total de valores duplicados, temos 32.252 ocorrências e ao se fazer uma rapida checagem nas taxas de cancelamento entre duplicatas, observou-se:
+
+- Taxa de cancelamento [DF Original] = 0.3704
+- Taxa de cancelamento [DF sem Duplicatas] = 0.2728
+- Taxa de cancelamento [DF apenas Duplicatas] = 0.6343
+
+Olhando especificamente as colunas `market_segment`, `customer_type`, `deposit_type`, percebeu-se uma concentração elevada em algumas categorias, de forma que tenha relação sistêmica com a anonimação do dataset.
+
+Dessa forma manteve-se  as informações para investigação posterior na sessão 4.
+
+### 3.3. Valores Nulos
 
 Foi avaliado a presença de valores Nulos nas colunas do dataset para tentar entender qual seria a estratégia para cada caso e como resolver. Dessa forma obteve-se 4 colunas:
 
@@ -94,7 +106,7 @@ Foi avaliado a presença de valores Nulos nas colunas do dataset para tentar ent
 - `agent`: possui 16.340 nulos (13.69%). Como isso tem de fato um significado, onde não houve intermédio de agências de viagem, colocou-se "no_agency".
 - `company`: possui 112.593 nulos (94.31%). Como isso tem de fato um significado, onde não é uma empresa fazendo a reserva, colocou-se "no_company".
 
-### 3.3. Outliers
+### 3.4. Outliers
 
 Foi verificado a questão de outliers de forma simples utilizando describe(), para trazer pontos fora do esperado para uma investigação mais completa. Nesse primeiro momento houve apenas um ponto de atenção:
 
@@ -102,7 +114,10 @@ Foi verificado a questão de outliers de forma simples utilizando describe(), pa
     - Valor negativo: aparece -6,38 como valor mínimo.
     - Valor muito alto: aparece 5.400 como valor máximo.
 
-[HIST]
+<p align="center">
+  <img src="images/section_03_histogram_01_adr.jpeg" width="600">
+</p>
+
 
 Ao olharmos o histograma, percebemos que não são valores dentro do esperado. 
 
@@ -116,7 +131,9 @@ Dessa forma a estratégia adotada:
     - Valor muito alto: aparece 55 como valor máximo.
     - Valor 0: aparece alguns casos com 0 adultos na reserva.
 
-[HIST]
+<p align="center">
+  <img src="images/section_03_histogram_02_adults.jpeg" width="600">
+</p>
 
 Ao olharmos o histograma, percebemos que a concentração de valores está entre 1 e 5, o que de fato faz muito mas sentido. Os valores muito elevados não fazem muito sentido pensando em uma reserva de hotel, sendo que acima de 5 pessoas, temos apenas 14 eventos. Para os valores de 0 pessoas adultas, também é estranho, mesmo que tenhamos um total de 403 linhas.
 
@@ -124,4 +141,13 @@ Dessa forma a estratégia adotada:
 - Valor elevado: 
 - Valor 0: 
 
-Dentro dessa questão ainda surgiu mais uma verificação, reservas que constam com 0 pessoas (adults + children + babies).
+Dentro dessa questão ainda surgiu mais uma verificação, reservas que constam com 0 pessoas (adults + children + babies) sendo 180 eventos no total.
+
+### 3.5. Desbalanceamento da classe
+
+No dataset atual, não há um problema em relação ao balanceamento que precise de tratamento inicialmente. Além de uma taxa de `is_canceled` = 1 de 37%, ainda há um total de eventos relativamente alto em quantidade absoluta, com 44.224 eventos.
+
+### 3.6. Informações descartadas
+
+Ao se fazer uma análise das informações disponíveis no dataset, duas colunas tiveram que ser descartadas:
+- `reservation_status` e `reservation_status_date`: elas refletem o real status da reserva e o momento de atualização do último status. No entanto são informações que não estão "disponíveis" no momento da reserva, elas são resultado diretamtente do nosso target `is_canceled`.
