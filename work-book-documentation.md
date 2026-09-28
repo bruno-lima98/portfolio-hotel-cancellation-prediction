@@ -124,8 +124,8 @@ Ao olharmos o histograma, percebemos que não são valores dentro do esperado.
 O valor negativo se encontra apenas em 1 único evento, sugerindo que pode ter sido algum problema de imputação. O valor de 5.400 aparenta também ser algum tipo de erro de digitação, pelo fato de ser um caso isolado, 10x maior que o 2º maior valor de ~500. Ao removermos esse valor do plot temos algo muito mais factivel.
 
 Dessa forma a estratégia adotada:
-- Valor negativo: imputamos manualmente 0.
-- Valor elevado: 
+- Valor negativo: utilizamos o valor absoluto.
+- Valor elevado: capamos em um valor razoável (500).
 
 `adults`: essa coluna informa sobre o total de adultos na reserva. No entanto ela aparece com um ponto de atenção:
     - Valor muito alto: aparece 55 como valor máximo.
@@ -138,8 +138,8 @@ Dessa forma a estratégia adotada:
 Ao olharmos o histograma, percebemos que a concentração de valores está entre 1 e 5, o que de fato faz muito mas sentido. Os valores muito elevados não fazem muito sentido pensando em uma reserva de hotel, sendo que acima de 5 pessoas, temos apenas 14 eventos. Para os valores de 0 pessoas adultas, também é estranho, mesmo que tenhamos um total de 403 linhas.
 
 Dessa forma a estratégia adotada:
-- Valor elevado: 
-- Valor 0: 
+- Valor elevado: Os valores de outras informações relativas à valores elevados indicavam algum problema de imputação, de forma que foram removidos.
+- Valor 0: foram removidas as linhas com 0 adultos na reserva por incosistência com a realidade. Em um cenário real isso seria bloqueado ou informado para ajuste.
 
 Dentro dessa questão ainda surgiu mais uma verificação, reservas que constam com 0 pessoas (adults + children + babies) sendo 180 eventos no total.
 
