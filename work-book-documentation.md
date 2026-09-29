@@ -204,4 +204,22 @@ Após todas as considerações é necessário aplicar de fato a técnica de Out 
     - percentual da base = 21.37%.
     - taxa de cancelamento = 32.41%
 
+> *PS: ainda percebe-se uma taxa menor de cancelamento no dataset de teste pelo que verificamos anteriormente, em que temos uma viés de diminuição de taxa ao avançarmos para direita no dataset devido à distorção gerada pela forma de coleta, no entanto conseguimos diminuir para valores aceitáveis.*
 
+## 4.2. TimeSeriesSplit x Unique Validation 
+
+Uma vez que selecionamos a fatia de teste anteriormente utilizando OOT, vamos manter a estratégia de divisão temporal no dataset. Uma das mais interessantes aqui é TimeSeriesSplit, que consiste em uma divisão de folds utilizando uma data de referência para dividirmos o dataset.
+
+Os pontos que devemos tomar cuidado ao utilizar essa estratégia e os prós/contras são explicitados a seguir:
+
+  - **a) Comparação entre modelos:** como será necessário fazer comparações entre modelos para uma escolha futura, vai ser necessário multíplos folds pareados, para garantir uma força estatística de comparação adequada, eliminando viés ou erros estatísticos e dessa forma uma separação múltiplica com folds temporais ganha bastante valor.
+  
+  - **b) Tamanho da amostra:** ao utilizarmos esse tipo de estratégia é necessário garantir que a amostra seja robusta o suficiente. No cenário atual temos 24 meses de análise (split OOT) com 89.858 eventos, o que parece suportar uma divisão dessa forma sem o risco de micro folds ou coisas do gênero. Se por exemplo tivermos 5 splits, teremos pelo menos 4 meses em cada um.
+  
+  - **c) Custo computacional:** um cuidado que é necessário no entanto é o gasto computacional que o tuning futuro ao se utilizar essa estratégia vai gerar. Como temos em torno de 90 mil linha, isso acaba não se tornando um problema muito alarmante, mas é necessário monitorar esse tipo de prática.
+
+  - **d) Expanding window x Sliding window:** existem duas estratégias dentro do TimeSeriesSplit, onde a primeira utilizamos folds cumulativos, ou seja, o fold seguinte (mais ao futuro) agrega os dados do fold anterior, fazendo com que os dados mais do passado também treinem esse fold. Ou temos a segunda, onde cada fold recorta uma janela de tempo fixo, e conforme o fold avança para frente, os do passado não são utilizados. Como não temos um problema de mudança de comportamento do target ou booking, e nossa janela de tempo não é tão elevada, vamos adotar a estratégia inicial de folds cumulativos.
+
+  # 5. Exploratory Data Analysis (EDA)
+
+  
