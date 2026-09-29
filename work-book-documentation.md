@@ -220,6 +220,22 @@ Os pontos que devemos tomar cuidado ao utilizar essa estratégia e os prós/cont
 
   - **d) Expanding window x Sliding window:** existem duas estratégias dentro do TimeSeriesSplit, onde a primeira utilizamos folds cumulativos, ou seja, o fold seguinte (mais ao futuro) agrega os dados do fold anterior, fazendo com que os dados mais do passado também treinem esse fold. Ou temos a segunda, onde cada fold recorta uma janela de tempo fixo, e conforme o fold avança para frente, os do passado não são utilizados. Como não temos um problema de mudança de comportamento do target ou booking, e nossa janela de tempo não é tão elevada, vamos adotar a estratégia inicial de folds cumulativos.
 
-  # 5. Exploratory Data Analysis (EDA)
+# 5. Exploratory Data Analysis (EDA)
 
-  
+Agora iremos começar a olhar os dados de fato. No entanto devemos fazer qualquer tipo de exploração sem nunca olhar dataset de teste, pois isso pode causar vazamentos ou coisas do gerêrno, assim, vamos focar no dataset de treino.
+
+## 5.1. AUC Univariado
+
+O primeiro teste simples é observar se as features individualmente já possuem algum tipo de informação do target (e também verificar se não há vazamento por alguma se o valor der muito alto). Dessa forma aplicou-se o teste obteve-se algumas resultados que fazem sentido quando pensamos na reserva de fato, podendo-se destacar:
+
+- `lead_time`: algo que já tinhamos percebido antes, mas vemos aqui novamente que reservas com muita antecedência tendem a cancelar mais.
+
+- `total_of_special_requests`: essa é uma feature que nos traz um certo "engajamento", então de fato espera-se que quanto mais pedidos e personalização de uma reserva tenhamos, menor a chance de cancelamento.
+
+- `booking_changes`: também uma feature de "engajamento", mostrando uma taxa de reserva menor para muitas mudanças.
+
+- `previous_cancellations`: essa também faz sentido, pois indica que o hóspede já tem um certo "costume" de cancelar reservas, então de fato espera-se uma maior taxa de cancealementos em hóspedes recorrentes a cancelar.
+
+- `arrival_date_year`: essa é uma feature que relaciona com data, temos que tomar cuidado aqui, ainda mais que no dataset só possuimos duas opções (2015/2016), então o sinal que obtivemos aqui talvez não faça tanto sentido de ser utilizado.
+
+
