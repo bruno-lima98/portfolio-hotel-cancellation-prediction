@@ -263,8 +263,25 @@ Vamos avaliar o tipo de relação entre as features analisadas na sessão anteri
 
 Ao observarmos as forças encontradas com o AUC, selecionamos:
 
-- `lead_time`: Decil Cut
+- `lead_time`: Decil Cut.
+  - Percebemos uma relação monotônica bem direta, a taxa de cancelamento sobre junto com a subida de `lead_time`.
 
-- `adr`: Decil Cut
+- `adr`: Decil Cut.
+  - Há uma relação mais serrilhada, não se mantendo constante em uma única direção.
 
-- ``
+- `total_of_special_requests`: Normal Cut.
+  - Uma relação inversa, indo em direção do que era previsto para um cliente mais engajado tender a cancelar menos.
+
+- `booking_changes`: Normal Cut.
+  - Também segue a relação inversa devido ao engajamento do clientes, só tem uma distorção conforme aumentamos muito, mas poquissimos casos.
+
+- `previous_cancellations`: Normal Cut.
+  - Chama atenção o fato de um cancelamento prévio ter 94% de chance de cancelamento da reserva. 
+  - Ao cruzarmos com algumas outras informações, não parece ter algum tipo de problema.
+
+- `required_car_parking_spaces`: Normal Cut.
+  - Também chama atenção o fato de 1+ vaga requisitada ter 0% de taxa de cancelamento (com mais de 5000 eventos).
+  - Foi feita uma investigação para verificar vazamento, porém aparentemente não isso acontecendo.
+  - Dessa forma mantemos ela, mas com um ponto de atenção.
+
+  
