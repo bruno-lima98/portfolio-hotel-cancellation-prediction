@@ -238,4 +238,16 @@ O primeiro teste simples é observar se as features individualmente já possuem 
 
 - `arrival_date_year`: essa é uma feature que relaciona com data, temos que tomar cuidado aqui, ainda mais que no dataset só possuimos duas opções (2015/2016), então o sinal que obtivemos aqui talvez não faça tanto sentido de ser utilizado.
 
+## 5.2. IV para Variáveis Categóricas
+
+A mesma ideia anterior foi aplicada nas variáveis categóricas, mas dessa vez utilizadno o conceito de Information Value, que busca responder a mesma pergunta, uma variavel categórica isolada tem algum poder preditivo?
+
+Ao rodarmos o teste, algumas features chamaram atenção:
+
+- `deposit_type`: trouxe um valor elevadíssimo (acima 0.5 já seria suspeito), o que demandou uma investigação mais aprofundada.
+
+- `assigned_room_type`: essa feature chama atenção pelo fato de quando olhamos `reserved_room_type`, temos um valor bem inferior e isso levantou a suspeita de que a feature de quarto designado não esteja disponivel no momento da reserva e seja atribuido posteriormente, não podendo ser utilizada pelo modelo que tem como objetivo avalair as reservar no momento do agendamento.
+
+- `agent`: essa feature também temos que tomar cuidado pois ela apresenta um sinal relativamente alto, mas o fato de possuir muitas categorias (304) pode ter levado a inflada do valor do sinal.
+
 
