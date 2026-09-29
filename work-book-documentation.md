@@ -245,8 +245,15 @@ A mesma ideia anterior foi aplicada nas variáveis categóricas, mas dessa vez u
 Ao rodarmos o teste, algumas features chamaram atenção:
 
 - `deposit_type`: trouxe um valor elevadíssimo (acima 0.5 já seria suspeito), o que demandou uma investigação mais aprofundada.
+  - Ao observarmos de fato as opções, verificamos que `deposit_type` = no_refund possui 99.28% de taxa de cancelamento.
+  - No entanto essa informaão de fato é disponível no momento da reserva, então não é um vazamento propriamente dito.
+  - Quando comparamos isso com as duplicatas verificadas antes, que possuiam boa parte (~40%) como no_refund, começamos a perceber um padrão sistemático, onde reservas de bloco, via agência com depósito não-reembolsável tem uma cancelamento elevado.
+  - Dessa forma manteremos a feature como uma forte preditora.
 
 - `assigned_room_type`: essa feature chama atenção pelo fato de quando olhamos `reserved_room_type`, temos um valor bem inferior e isso levantou a suspeita de que a feature de quarto designado não esteja disponivel no momento da reserva e seja atribuido posteriormente, não podendo ser utilizada pelo modelo que tem como objetivo avalair as reservar no momento do agendamento.
+  - Aqui temos uma diferença de 5.4% x 40.6% entre taxas de cancelamentos para quarto diferente x quarto igual respectivamente. Isso claramente é uma diferença alta e faz sentido com a hipótese de vazamento de processo, pois apenas quando o hóspede chega ao hotel que há uma troca de quarto (ou pelo menos muito próximo da viagem). 
+  - Dessa forma o fato de o cliente chegar ao hotel para a hospedagem implica na mudança possível de quarto, logo a chance de ele cancelar nesse momento é muito menor.
+  - Assim, iremos remover essa feature especificamente pois ela não está disponível no momento da reserva e carrega um vazamento de processo.
 
 - `agent`: essa feature também temos que tomar cuidado pois ela apresenta um sinal relativamente alto, mas o fato de possuir muitas categorias (304) pode ter levado a inflada do valor do sinal.
 
