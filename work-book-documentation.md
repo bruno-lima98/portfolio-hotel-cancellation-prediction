@@ -257,4 +257,14 @@ Ao rodarmos o teste, algumas features chamaram atenção:
 
 - `agent`: essa feature também temos que tomar cuidado pois ela apresenta um sinal relativamente alto, mas o fato de possuir muitas categorias (304) pode ter levado a inflada do valor do sinal.
 
+## 5.3. Taxa por Decil
 
+Vamos avaliar o tipo de relação entre as features analisadas na sessão anterior, dessa forma vamos utilizar a separação em agrupamentos. Para os casos que temos bastante opções em variáveis contínuas, aplicamos o corte por decil. Para os casos que tem poucas opções, podem avaliar pela opções diretamente.
+
+Ao observarmos as forças encontradas com o AUC, selecionamos:
+
+- `lead_time`: Decil Cut
+
+- `adr`: Decil Cut
+
+- ``
