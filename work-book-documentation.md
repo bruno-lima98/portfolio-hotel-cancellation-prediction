@@ -261,10 +261,10 @@ Ao rodarmos o teste, algumas features chamaram atenção:
 
 Vamos avaliar o tipo de relação entre as features analisadas na sessão anterior, dessa forma vamos utilizar a separação em agrupamentos. Para os casos que temos bastante opções em variáveis contínuas, aplicamos o corte por decil. Para os casos que tem poucas opções, podem avaliar pela opções diretamente.
 
-Ao observarmos as forças encontradas com o AUC, selecionamos:
+A seleção de quais features testar deixou de ser manual: a partir daqui usamos a `lista_features`, e o critério de decil vs. valor bruto também é automático, baseado na cardinalidade de cada feature (`decile_cardinality_threshold = 20`, corte por julgamento, mesma categoria do `auc_power`/`iv_power`).
 
 - `lead_time`: Decil Cut.
-  - Percebemos uma relação monotônica bem direta, a taxa de cancelamento sobre junto com a subida de `lead_time`.
+  - Percebemos uma relação monotônica bem direta, a taxa de cancelamento sobe junto com a subida de `lead_time`.
 
 - `adr`: Decil Cut.
   - Há uma relação mais serrilhada, não se mantendo constante em uma única direção.
@@ -284,4 +284,19 @@ Ao observarmos as forças encontradas com o AUC, selecionamos:
   - Foi feita uma investigação para verificar vazamento, porém aparentemente não isso acontecendo.
   - Dessa forma mantemos ela, mas com um ponto de atenção.
 
+- `arrival_date_year`: Normal Cut.
+  - Relação crescente forte entre os anos (29,8% em 2015 → 52,0% em 2017).
+  - Ponto de atenção: essa relação provavelmente não generaliza bem — "ano" é uma feature que, em produção, sempre vai apresentar valores que o modelo nunca viu no treino (2018, 2019...). Pode também estar parcialmente confundida com `lead_time` (reservas mirando anos mais distantes tendem a ter antecedência maior).
+
+- `arrival_date_week_number`: Decil Cut.
+  - Relação fraca e sem tendência clara, oscilando entre ~32% e ~45% sem padrão monotônico. Não parece carregar sinal forte isolado, apesar de ter passado no corte de seleção.
+
+- `adults`: Normal Cut.
+  - Relação não perfeitamente monotônica (1→30,2%, 2→39,1%, 3→32,8%, 4→23,9%). O valor 4 tem amostra pequena (46 casos) — tratar com cautela.
+
+- `days_in_waiting_list`: Decil Cut.
+  - O corte por decil não capturou a relação real, pois a variável é extremamente concentrada em 0 (96% das linhas). Recodificada como binária (was_on_waiting_list), revela sinal forte e intuitivo: 63,9% de cancelamento entre quem passou por lista de espera, vs. 36,0% no restante. Considerar essa binarização como opção de feature engineering na Seção 5, em vez do valor contínuo bruto.
+
+- `stays_in_week_nights`: Decil Cut.
+  - Relação fraca, sem tendência monotônica clara — leve pico entre 1-2 noites (44,2%), depois se estabiliza por volta de 35-38% nas faixas seguintes.
   
