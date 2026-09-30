@@ -300,3 +300,56 @@ A seleção de quais features testar deixou de ser manual: a partir daqui usamos
 - `stays_in_week_nights`: Decil Cut.
   - Relação fraca, sem tendência monotônica clara — leve pico entre 1-2 noites (44,2%), depois se estabiliza por volta de 35-38% nas faixas seguintes.
   
+## 5.4. Estabilidade Temporal
+
+Avaliamos a estabilidade da relação entre cada feature selecionada e o target ao longo dos 24 meses do Treino, comparando o poder (AUC/IV) mensal contra a referência calculada no Treino inteiro.
+
+**Estáveis (numéricas)**: `lead_time`, `adr`, `total_of_special_requests`, `required_car_parking_spaces`: oscilação normal em torno da referência, sem tendência ou queda abrupta.
+
+**IV mensal instável (categóricas) - artefato de amostra pequena, não instabilidade real**:
+`deposit_type`, `country`, `market_segment`, `hotel` (e demais categóricas) mostraram IV mensal oscilando muito acima da referência do Treino inteiro, inclusive em features de baixa cardinalidade (`hotel` tem só 2 categorias). Investigamos isolando `deposit_type=non_refund` e olhando a taxa de cancelamento bruta mês a mês (que não sofre desse viés) - o resultado ficou estável entre 91,6% e 100% em todos os 24 meses, com volume relevante. Conclusão: o IV calculado em amostra pequena (~3-9k linhas/mês vs. ~90k do Treino inteiro) infla sistematicamente por propriedade do próprio estimador - não usamos o gráfico de IV mensal pra julgar estabilidade individual das demais categóricas.
+
+**`agent` - instabilidade parcialmente real, não só artefato**:
+Ao investigar os 5 agentes de maior volume com taxa bruta mensal: `agent=9.0` mostra tendência real de alta ao longo de 2016 (20%→48%); `agent=1.0` mostra concentração extrema de volume em 2015 (pico de 2.552 reservas em jul/2015) e quase desaparecimento em 2016 - padrão parecido com o achado de `previous_cancellations`, mas testado e confirmado como **não sendo o mesmo conjunto de linhas** (só 11,8% de sobreposição). `agent=240.0` razoavelmente estável; `no_agency` e `agent=6.0` ruidosos sem tendência clara (provável amostra pequena). Conclusão: diferente do `deposit_type`, `agent` carrega heterogeneidade temporal real em pelo menos dois dos seus valores mais frequentes - vale atenção redobrada se essa feature entrar como está (alta cardinalidade) na Seção 5.
+
+**`previous_cancellations` - instabilidade real, feature candidata a reavaliação**:
+O poder (AUC) despenca de ~1,0 (jan-mar/2015) pra 0,50 (abr-ago/2015), sobe de novo (set-nov/2015) e praticamente desaparece (fica em 0,50) durante quase todo 2016. Investigando o volume de `previous_cancellations=1` por mês, o padrão se confirma: concentração forte em blocos de 2015 (jan-mar e set-dez, centenas por mês) e quase ausência em 2016 (dezenas por mês). Como 2016 é o período mais próximo do Teste (2017), o sinal agregado (poder=0,55) é dominado por um padrão de 2015 que pode não se repetir - candidata a reavaliação/remoção na Seção 5, ou uso com monitoramento reforçado.
+
+### 5.5. Validação Adversarial
+
+Treinamos um classificador (RandomForestClassifier) para distinguir linhas de 2015 vs. 2016 dentro do Treino, usando as features numéricas selecionadas (excluindo `arrival_date_year`/`arrival_date_week_number`, que encodam o calendário diretamente e inflam o resultado de forma trivial).
+
+**AUC adversarial = 0,6806** - indica diferença de composição moderada (não um abismo) entre os dois períodos.
+
+**Features mais responsáveis pela separação**: `previous_cancellations` (0,292) e `days_in_waiting_list` (0,266), somando mais da metade da importância total. Ambas investigadas individualmente e confirmadas com o mesmo padrão: concentração forte de meados de 2015 a início de 2016, seguida de quase desaparecimento pelo resto de 2016. `adr` (0,205) e `lead_time` (0,139) também aparecem, mas com explicação mais plausível e menos preocupante (reajuste natural de tarifa ao longo do tempo; ligação já conhecida de `lead_time` com o viés de coleta tratado na Seção 6).
+
+**Observação agregada**: três sinais independentes (`previous_cancellations`, `days_in_waiting_list`, e o comportamento de `agent=1.0`) compartilham a mesma assinatura temporal - presença forte num bloco entre meados de 2015 e início de 2016, quase ausência depois. Isso sugere uma causa comum não identificada (possível mudança operacional/de canal por volta de 2016), não três fenômenos isolados. Registrado como limitação conhecida: essas features carregam risco de não generalizar bem para o período de Teste (2017) e para produção futura.
+
+### 5.5. Correlação entre Features (Spearman) e Multicolinearidade (VIF)
+
+Diferente das etapas anteriores (que avaliaram feature vs. target), aqui avaliamos a relação **entre as próprias features numéricas** — informação nova que ainda não tínhamos.
+
+Optamos por Spearman em vez de Pearson por já termos visto relações não-lineares em alguma features (ex: `adr`), tornando a correlação por rank mais segura como default.
+
+**Achados da correlação**:
+- `arrival_date_year` × `lead_time` = 0,34 — confirma a suspeita levantada lá na Seção 5.1 de que parte do sinal de `arrival_date_year` vem emprestado do `lead_time`.
+- `arrival_date_year` × `arrival_date_week_number` = -0,52 — correlação forte, provavelmente reforçada artificialmente pelo recorte temporal fixo do Treino (jan/2015-dez/2016) definido na Seção 6.
+
+**Achados do VIF**:
+- `arrival_date_year` (23,1) e `arrival_date_week_number` (5,3) — redundantes entre si, consistente com a correlação acima.
+- `adults` (18,9) — chamativo porque nenhuma correlação par-a-par com `adults` passa de 0,27. O VIF captura redundância **multivariada**: a combinação de `adr` + `lead_time` + `stays_in_week_nights` + `total_of_special_requests` explica boa parte da variância de `adults`, sem que nenhuma isoladamente pareça redundante.
+
+**Decisão**: multicolinearidade é problema de inferência (coeficiente instável em modelo linear), não de predição — para GBM (modelo mais provável dado o restante do projeto), VIF alto não exige ação por si só. `adults` fica como está, sem necessidade de exclusão.
+
+`arrival_date_year`, porém, acumula três evidências independentes contra seu uso como feature bruta: (1) não generaliza bem — produção sempre trará anos fora do que o Treino viu; (2) contribuiu para o AUC adversarial inflado (Seção 5.4), ao encodar calendário diretamente; (3) VIF alto (23,1), reforçando a redundância com `lead_time`. **Decisão preliminar para a Seção 6 (seleção de features): excluir `arrival_date_year` como feature bruta**, mantendo `lead_time` como portador da informação temporal relevante de forma mais robusta.
+
+### 5.6. Associação entre Features Categóricas (Cramér's V)
+
+Equivalente categórico da análise de correlação/VIF do 4.1 - avalia redundância entre as próprias features, não feature vs. target. Excluímos `agent`, `country` e `company` do teste par-a-par por alta cardinalidade, que infla o Cramér's V de forma não confiável (mesmo viés de amostra pequena por célula já visto no IV mensal, Seção 5.3).
+
+**Achados**:
+- `assigned_room_type` × `reserved_room_type` (0,725) e `assigned_room_type` × `hotel` (0,398): esperados, mas irrelevantes para decisão - `assigned_room_type` já excluído por vazamento de processo (Seção 5.1).
+- `market_segment` × `distribution_channel` (0,683): redundância real. `market_segment` tem IV bem maior (0,276 vs. 0,130), sugerindo que carrega a maior parte da informação de forma mais granular.
+- `deposit_type` × `market_segment` (0,362): reforça a hipótese já levantada nas investigações de duplicatas/`adults>5` - `non_refund` concentrado em segmentos específicos de mercado (reserva em bloco/agência).
+
+**Decisão**: sem ação forçada agora - para GBM, associação entre categóricas não compromete predição, só parcimônia. Fica registrado como consideração de simplicidade para a Seção 6 (seleção de features): `distribution_channel` é candidata a remoção por redundância com `market_segment`, a decidir formalmente lá.
