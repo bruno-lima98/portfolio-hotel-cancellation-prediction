@@ -1,0 +1,9 @@
+.git
+.venv
+__pycache__
+*.pyc
+main.ipynb
+images/
+tests/
+work-book-documentation.md
+problem-framing-documentation.md
