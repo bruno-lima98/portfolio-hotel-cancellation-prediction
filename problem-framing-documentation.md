@@ -112,6 +112,6 @@ Dessa forma, a principal atuação resultante da aplicação do modelo é a tent
 - valor perdido da reserva (cancelamento prévio) = USD 150 x 50% x 3 = USD 225.00 / reserva
 - valor perdido da reserva (não comparecimento) = USD 150 x 100% x 3 = USD 450.00 / reserva
 - valor perdido da reserva (médio) = (USD 225 x 36 + USD 450 x 1) / 37 = USD 231.01 / reserva
-- retorno da reserva convertida (não comparecimento) = 5% x 225 = USD 11.25
-- retorno da reserva convertida (cancelamento prévio) = 5% x 450 = USD 22.50
-
+- retorno da reserva convertida (cancelamento prévio) = 5% x 225 = USD 11.25
+- retorno da reserva convertida (não comparecimento) = 5% x 450 = USD 22.50
+- retorno médio = 5% × 231,01 = USD 11,55

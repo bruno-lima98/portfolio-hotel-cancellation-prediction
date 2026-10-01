@@ -498,3 +498,17 @@ Foi verificado a possibilidade de overfitting, mas a curva de Treino continua ca
 Foi feito o refit final no `CatBoostClassifier` com `best_params` (Seção 7) + `iterations=128` (fixo, sem early stopping), treinado no `X_train` completo (as fatias usadas na sonda voltam a fazer parte do treino final).
 
 O modelo foi salvo em `artifacts/models/catboost_final_v1.cbm` (formato nativo do CatBoost, via `save_model`/`load_model` — mais robusto a mudança de versão da biblioteca do que serialização genérica via `pickle`/`joblib`).
+
+## 10. Calibração de Probabilidade
+
+Antes de decidir o limiar de decisão (Seção 11), verificamos se a probabilidade prevista pelo modelo reflete de fato a frequência real de cancelamento, e não só o ranking entre casos. Para isso as probabilidades usadas não podem vir do `modelo_final` (treinado no X_train inteiro, o que contaminaria qualquer diagnóstico), e sim de previsões out-of-fold geradas com a mesma configuração tunada (`best_params`, Seção 7), via o mesmo `TimeSeriesSplit` usado no resto do projeto.
+
+O reliability diagram mostra a curva do modelo levemente acima da diagonal de calibração perfeita na faixa intermediária de probabilidade (por exemplo, previsto ~0,23 contra observado ~0,29, e previsto ~0,76 contra observado ~0,81), um desvio pequeno e consistente, sem saltos abruptos em nenhum bin. Nas pontas, próximo de 0 e de 1, onde ficam os casos quase-determinísticos de `deposit_type` e `required_car_parking_spaces` já identificados na EDA (Seção 5), a curva cola bem na diagonal.
+
+<p align="center">
+  <img src="images/section_10_graph_reliability_diagram.jpeg" width="500">
+</p>
+
+O Brier Skill Score (0,4699) confirma que o modelo reduz o erro de probabilidade em quase metade comparado a simplesmente prever a prevalência geral para todo mundo, reforçando que a miscalibração observada é pequena em magnitude, não um sinal de modelo ruim.
+
+Como o uso final da probabilidade é decidir um limiar de corte via custo (Seção 11), não expor o número bruto diretamente ao usuário, decidimos não aplicar correção via Platt scaling ou regressão isotônica. O ganho seria marginal frente à complexidade adicional de mais uma etapa de ajuste no pipeline. Fica documentado como decisão consciente, revisitável se o uso do modelo mudar para expor a probabilidade diretamente — por exemplo, em faixas de risco num dashboard (Seção 16).
