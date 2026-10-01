@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pandas = "==2.3.3"
+numpy = "==2.3.5"
+scikit-learn = "==1.7.2"
+catboost = "==1.2.10"
+joblib = "==1.5.2"
+flask = "*"
+gunicorn = {version = "*", markers = "sys_platform != \"win32\""}
+
+[dev-packages]
+waitress = {version = "*", markers = "sys_platform == \"win32\""}
+requests = "*"
+
+[requires]
+python_version = "3.13"
