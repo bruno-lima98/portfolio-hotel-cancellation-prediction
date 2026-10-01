@@ -410,3 +410,72 @@ Confirma a hipótese: o Fold 0 concentra muito mais casos de sinal quase-determi
 <p align="center">
   <img src="images/section_07_graph_01_baseline_model_metrics.jpeg" width="1200">
 </p>
+
+### 6.2. Comparação de Modelos Base (sem tuning)
+
+Quatro modelos avaliados com `TimeSeriesSplit(n_splits=5)` (janela crescente), mesmos folds para todos (comparação justa): Regressão Logística (baseline, Seção 6.1), XGBoost, LightGBM e CatBoost - sem tuning de hiperparâmetro nesta etapa, só para ter um primeiro comparativo entre famílias.
+
+SVM, KNN e MLP foram descartados como candidatos (sem testar): SVM tem custo computacional proibitivo no volume de dado (~90k linhas) e não gera probabilidade bem calibrada nativamente; KNN sofre da alta cardinalidade de `agent`/`country`/`company` e da maldição da dimensionalidade; MLP tem evidência desfavorável frente a GBM em dado tabular (Grinsztajn et al., 2022, citado no playbook).
+
+**Pipeline dos GBMs**: classe customizada (`GBMCategoricalPreparer`) para lidar com categoria nova em produção/validação - aprende as categorias só no Treino de cada fold e converte categoria não vista em `NaN` (XGBoost/LightGBM, que aceitam nativamente) ou na string `"unseen"` (CatBoost, que exige string em vez de `NaN` em categórica).
+
+**Resultado (AUC por fold)**:
+
+| Modelo | Fold 0 | Fold 1 | Fold 2 | Fold 3 | Fold 4 | Média | Desvio |
+|---|---|---|---|---|---|---|---|
+| Logistic Regression | 0,960 | 0,819 | 0,836 | 0,836 | 0,877 | 0,8655 | 0,0511 |
+| XGBoost | 0,957 | 0,861 | 0,858 | 0,848 | 0,911 | 0,8870 | 0,0413 |
+| LightGBM | 0,963 | 0,877 | 0,862 | 0,863 | 0,915 | 0,8959 | 0,0385 |
+| CatBoost | 0,960 | 0,892 | 0,872 | 0,863 | 0,916 | **0,9005** | **0,0348** |
+
+Todos os quatro mostram o mesmo pico no Fold 0, já diagnosticado e documentado na Seção 6.1 (concentração anômala de `previous_cancellations=1` e `days_in_waiting_list>0` naquele período de validação) - confirma que é característica do dado, não do modelo.
+
+**Leitura preliminar**: CatBoost tem a maior média e o menor desvio entre os 3 GBMs, com XGBoost e LightGBM próximos entre si. A diferença entre os três é pequena o suficiente para exigir teste formal (Nadeau-Bengio/ROPE) antes de declarar um vencedor. Regressão Logística, como esperado, fica atrás dos GBMs em todos os folds, confirmando que a relação entre features e target tem componente não-linear relevante (consistente com achados da Seção 5, ex: `adr` não-monotônico, interações sugeridas por `deposit_type`×`market_segment`).
+
+### 6.3. Teste Formal de Comparação (Nadeau-Bengio)
+
+Objetivo: confirmar se a vantagem aparente do CatBoost na comparação bruta (Seção 6.2) é estatisticamente defensável, ou se está dentro do ruído esperado entre os 5 folds - seguindo a heurística corrigida da Seção 9 do playbook (comparar a dispersão da diferença pareada por fold, não a dispersão de cada modelo isolado).
+
+**Adaptação necessária**: a correção de Nadeau-Bengio (`var × (1/k + n_teste/n_treino)`) assume treino/teste de tamanho estável entre folds (K-Fold clássico). Como o CV usado aqui é `TimeSeriesSplit` com janela crescente (treino cresce a cada fold), usamos a média do tamanho de treino/teste entre os 5 folds como aproximação prática - documentado como simplificação, não como aplicação exata da fórmula original.
+
+**Resultado (comparações pareadas, AUC)**:
+
+| Comparação | Diferença média | t | p-valor |
+|---|---|---|---|
+| CatBoost vs. LightGBM | +0,0046 | 0,809 | 0,4641 |
+| CatBoost vs. XGBoost | +0,0135 | 1,624 | 0,1797 |
+| LightGBM vs. XGBoost | +0,0089 | 1,978 | 0,1190 |
+
+**Conclusão**: nenhuma diferença é estatisticamente significativa (todos os p-valores > 0,11). Os três GBMs têm performance estatisticamente equivalente neste dataset - consistente com a literatura citada no playbook (Seção 7.1, Grinsztajn et al.) de que implementações de GBM bem configuradas tendem a convergir em performance tabular. A vantagem do CatBoost na média bruta não é comprovadamente real, é dentro do ruído esperado entre 5 folds.
+
+**Decisão**: seguir com **CatBoost** para a Seção 7 (tuning de hiperparâmetro), não por vitória estatística comprovada, mas por critérios práticos de desempate: menor desvio entre folds (0,0348, mais estável) e encoding nativo de categórica mais sofisticado (*ordered target statistics*, Seção 5.3) - relevante dado que `agent`/`country`/`company` têm sinal real confirmado (Seção 5.1) e cardinalidade alta.
+
+## 7. Tuning de Hiperparâmetros (CatBoost)
+
+Após a comparação entre XGBoost, LightGBM e CatBoost (Seção 6), CatBoost foi escolhido para seguir adiante: não por diferença estatisticamente significativa (ver teste de Nadeau-Bengio, Seção 6.3), mas por ter a menor variância entre folds e o encoding categórico nativo mais sofisticado, relevante para `agent`/`country`/`company`.
+
+Utilizamos Optuna com TPE sampler, 30 trials, otimizando **log loss médio** (não AUC) - métrica sem dependência de limiar, consistente com a recomendação do playbook (Seção 10)
+de não usar métricas que embutem decisão de corte durante o tuning. CV: mesmo `TimeSeriesSplit(n_splits=5)` usado na comparação de modelos (Seção 6), garantindo que o tuning seja avaliado na mesma estrutura temporal do resto do projeto.
+
+**Espaço de busca:**
+- `learning_rate`: 0.01–0.3 (escala log)
+- `depth`: 3–8
+- `l2_leaf_reg`: 1.0–10.0 (escala log)
+- `iterations`: 1000, com `early_stopping_rounds=50`
+
+**Resultado:** melhor trial (#8 de 30) — log loss médio = **0,3734**
+
+| Hiperparâmetro | Valor |
+|---|---|
+| learning_rate | 0,0943 |
+| depth | 7 |
+| l2_leaf_reg | 2,856 |
+
+**Observações:**
+- O ótimo não caiu na borda do espaço de busca (nem learning_rate próximo de 0,01/0,3, nem depth em 3 ou 8 isoladamente dominando), os melhores trials convergiram numa faixa de
+  depth 7-8 e learning_rate ~0,09-0,27. Isso sugere que o espaço definido era adequado. Não há indício de que expandir os limites traria ganho.
+- `plot_param_importances` e `plot_slice` gerados e salvos em `images/08_catboost_tuning_resultados.png` para referência visual.
+- Estudo completo do Optuna (todos os 30 trials, utilizável para reanálise sem rerodar) persistido em `artifacts/optuna/optuna_study_catboost_v1.pkl`.
+
+A célula de tuning mantida no notebook, porém comentada, os hiperparâmetros vencedores foram hardcoded numa célula separada (`best_params`), para evitar re-executar uma busca de ~1h a cada vez que o notebook roda do zero. Reabrir o tuning só se houver mudança relevante no espaço de features, na métrica de otimização, ou na estratégia de CV.
+
