@@ -478,7 +478,7 @@ de não usar métricas que embutem decisão de corte durante o tuning. CV: mesmo
 **Observações:**
 - O ótimo não caiu na borda do espaço de busca (nem learning_rate próximo de 0,01/0,3, nem depth em 3 ou 8 isoladamente dominando), os melhores trials convergiram numa faixa de
   depth 7-8 e learning_rate ~0,09-0,27. Isso sugere que o espaço definido era adequado. Não há indício de que expandir os limites traria ganho.
-- `plot_param_importances` e `plot_slice` gerados e salvos em `images/08_catboost_tuning_resultados.png` para referência visual.
+- `plot_param_importances` e `plot_slice` gerados e salvos em `images/section_08_graph_optuna_resultados_catboost_tuning.png` para referência visual.
 - Estudo completo do Optuna (todos os 30 trials, utilizável para reanálise sem rerodar) persistido em `artifacts/optuna/optuna_study_catboost_v1.pkl`.
 
 A célula de tuning mantida no notebook, porém comentada, os hiperparâmetros vencedores foram hardcoded numa célula separada (`best_params`), para evitar re-executar uma busca de ~1h a cada vez que o notebook roda do zero. Reabrir o tuning só se houver mudança relevante no espaço de features, na métrica de otimização, ou na estratégia de CV.
