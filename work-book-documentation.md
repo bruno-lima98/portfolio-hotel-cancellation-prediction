@@ -286,19 +286,19 @@ A seleção de quais features testar deixou de ser manual: a partir daqui usamos
 
 - `arrival_date_year`: Normal Cut.
   - Relação crescente forte entre os anos (29,8% em 2015 → 52,0% em 2017).
-  - Ponto de atenção: essa relação provavelmente não generaliza bem — "ano" é uma feature que, em produção, sempre vai apresentar valores que o modelo nunca viu no treino (2018, 2019...). Pode também estar parcialmente confundida com `lead_time` (reservas mirando anos mais distantes tendem a ter antecedência maior).
+  - Ponto de atenção: essa relação provavelmente não generaliza bem - "ano" é uma feature que, em produção, sempre vai apresentar valores que o modelo nunca viu no treino (2018, 2019...). Pode também estar parcialmente confundida com `lead_time` (reservas mirando anos mais distantes tendem a ter antecedência maior).
 
 - `arrival_date_week_number`: Decil Cut.
   - Relação fraca e sem tendência clara, oscilando entre ~32% e ~45% sem padrão monotônico. Não parece carregar sinal forte isolado, apesar de ter passado no corte de seleção.
 
 - `adults`: Normal Cut.
-  - Relação não perfeitamente monotônica (1→30,2%, 2→39,1%, 3→32,8%, 4→23,9%). O valor 4 tem amostra pequena (46 casos) — tratar com cautela.
+  - Relação não perfeitamente monotônica (1→30,2%, 2→39,1%, 3→32,8%, 4→23,9%). O valor 4 tem amostra pequena (46 casos) - tratar com cautela.
 
 - `days_in_waiting_list`: Decil Cut.
   - O corte por decil não capturou a relação real, pois a variável é extremamente concentrada em 0 (96% das linhas). Recodificada como binária (was_on_waiting_list), revela sinal forte e intuitivo: 63,9% de cancelamento entre quem passou por lista de espera, vs. 36,0% no restante. Considerar essa binarização como opção de feature engineering na Seção 5, em vez do valor contínuo bruto.
 
 - `stays_in_week_nights`: Decil Cut.
-  - Relação fraca, sem tendência monotônica clara — leve pico entre 1-2 noites (44,2%), depois se estabiliza por volta de 35-38% nas faixas seguintes.
+  - Relação fraca, sem tendência monotônica clara - leve pico entre 1-2 noites (44,2%), depois se estabiliza por volta de 35-38% nas faixas seguintes.
   
 ## 5.4. Estabilidade Temporal
 
@@ -327,21 +327,21 @@ Treinamos um classificador (RandomForestClassifier) para distinguir linhas de 20
 
 ### 5.5. Correlação entre Features (Spearman) e Multicolinearidade (VIF)
 
-Diferente das etapas anteriores (que avaliaram feature vs. target), aqui avaliamos a relação **entre as próprias features numéricas** — informação nova que ainda não tínhamos.
+Diferente das etapas anteriores (que avaliaram feature vs. target), aqui avaliamos a relação **entre as próprias features numéricas** - informação nova que ainda não tínhamos.
 
 Optamos por Spearman em vez de Pearson por já termos visto relações não-lineares em alguma features (ex: `adr`), tornando a correlação por rank mais segura como default.
 
 **Achados da correlação**:
-- `arrival_date_year` × `lead_time` = 0,34 — confirma a suspeita levantada lá na Seção 5.1 de que parte do sinal de `arrival_date_year` vem emprestado do `lead_time`.
-- `arrival_date_year` × `arrival_date_week_number` = -0,52 — correlação forte, provavelmente reforçada artificialmente pelo recorte temporal fixo do Treino (jan/2015-dez/2016) definido na Seção 6.
+- `arrival_date_year` × `lead_time` = 0,34 - confirma a suspeita levantada lá na Seção 5.1 de que parte do sinal de `arrival_date_year` vem emprestado do `lead_time`.
+- `arrival_date_year` × `arrival_date_week_number` = -0,52 - correlação forte, provavelmente reforçada artificialmente pelo recorte temporal fixo do Treino (jan/2015-dez/2016) definido na Seção 6.
 
 **Achados do VIF**:
-- `arrival_date_year` (23,1) e `arrival_date_week_number` (5,3) — redundantes entre si, consistente com a correlação acima.
-- `adults` (18,9) — chamativo porque nenhuma correlação par-a-par com `adults` passa de 0,27. O VIF captura redundância **multivariada**: a combinação de `adr` + `lead_time` + `stays_in_week_nights` + `total_of_special_requests` explica boa parte da variância de `adults`, sem que nenhuma isoladamente pareça redundante.
+- `arrival_date_year` (23,1) e `arrival_date_week_number` (5,3) - redundantes entre si, consistente com a correlação acima.
+- `adults` (18,9) - chamativo porque nenhuma correlação par-a-par com `adults` passa de 0,27. O VIF captura redundância **multivariada**: a combinação de `adr` + `lead_time` + `stays_in_week_nights` + `total_of_special_requests` explica boa parte da variância de `adults`, sem que nenhuma isoladamente pareça redundante.
 
-**Decisão**: multicolinearidade é problema de inferência (coeficiente instável em modelo linear), não de predição — para GBM (modelo mais provável dado o restante do projeto), VIF alto não exige ação por si só. `adults` fica como está, sem necessidade de exclusão.
+**Decisão**: multicolinearidade é problema de inferência (coeficiente instável em modelo linear), não de predição - para GBM (modelo mais provável dado o restante do projeto), VIF alto não exige ação por si só. `adults` fica como está, sem necessidade de exclusão.
 
-`arrival_date_year`, porém, acumula três evidências independentes contra seu uso como feature bruta: (1) não generaliza bem — produção sempre trará anos fora do que o Treino viu; (2) contribuiu para o AUC adversarial inflado (Seção 5.4), ao encodar calendário diretamente; (3) VIF alto (23,1), reforçando a redundância com `lead_time`. **Decisão preliminar para a Seção 6 (seleção de features): excluir `arrival_date_year` como feature bruta**, mantendo `lead_time` como portador da informação temporal relevante de forma mais robusta.
+`arrival_date_year`, porém, acumula três evidências independentes contra seu uso como feature bruta: (1) não generaliza bem - produção sempre trará anos fora do que o Treino viu; (2) contribuiu para o AUC adversarial inflado (Seção 5.4), ao encodar calendário diretamente; (3) VIF alto (23,1), reforçando a redundância com `lead_time`. **Decisão preliminar para a Seção 6 (seleção de features): excluir `arrival_date_year` como feature bruta**, mantendo `lead_time` como portador da informação temporal relevante de forma mais robusta.
 
 ### 5.6. Associação entre Features Categóricas (Cramér's V)
 
@@ -378,7 +378,7 @@ drop_columns = {
 **Pendências de feature engineering para a Seção 7 (não são exclusões, são transformações já decididas)**:
 - `days_in_waiting_list` → recodificar como binária (`was_on_waiting_list`), decil não captura a relação (Seção 5.2).
 - `booking_changes` → agrupar valores ≥6 (amostra muito pequena e instável por valor individual, Seção 5.2).
-- `previous_cancellations` → agrupar valores ≥2; considerar ainda a instabilidade temporal confirmada (Seção 5.4 — concentração em blocos de 2015, quase ausência em 2016) antes de decidir se entra como está ou com ressalva de monitoramento.
+- `previous_cancellations` → agrupar valores ≥2; considerar ainda a instabilidade temporal confirmada (Seção 5.4 - concentração em blocos de 2015, quase ausência em 2016) antes de decidir se entra como está ou com ressalva de monitoramento.
 - `agent`, `company` (alta cardinalidade, 304/303 categorias) → encoding nativo do GBM ou `TargetEncoder` com cross-fitting na Seção 7; nunca one-hot.
 - `deposit_type` → atenção à calibração (Seção 8.3), dado o padrão de quase-separação perfeita em `non_refund` (IV=2,04).
 - `required_car_parking_spaces` → atenção à calibração (Seção 8.3), dado o padrão de 0% de cancelamento cravado no subgrupo investigado.
@@ -463,7 +463,7 @@ de não usar métricas que embutem decisão de corte durante o tuning. CV: mesmo
 - `l2_leaf_reg`: 1.0–10.0 (escala log)
 - `iterations`: 1000, com `early_stopping_rounds=50`
 
-**Resultado:** melhor trial (#8 de 30) — log loss médio = **0,3734**
+**Resultado:** melhor trial (#8 de 30) - log loss médio = **0,3734**
 
 <p align="center">
   <img src="images/section_08_graph_optuna_resultados_catboost_tuning.jpeg" width="1200">
@@ -485,19 +485,19 @@ A célula de tuning mantida no notebook, porém comentada, os hiperparâmetros v
 
 ## 9. Treinamento do Modelo Final
 
-Durante o tuning (Seção 7), cada fold decidiu seu próprio `best_iteration` via early stopping, mas essa informação não foi capturada trial a trial — só o log loss médio. Uma primeira tentativa de recuperar isso rodando a função objetivo uma única vez com `best_params` fixo resultou em `best_iteration` por fold = `[45, 179, 22, 14, 150]` — variância grande demais para confiar numa média/mediana simples, provavelmente combinando o crescimento do treino (`TimeSeriesSplit` com janela expansiva) com a heterogeneidade temporal já identificada na EDA (Seção 5.3-5.4). Abordagem descartada.
+Durante o tuning (Seção 7), cada fold decidiu seu próprio `best_iteration` via early stopping, mas essa informação não foi capturada trial a trial - só o log loss médio. Uma primeira tentativa de recuperar isso rodando a função objetivo uma única vez com `best_params` fixo resultou em `best_iteration` por fold = `[45, 179, 22, 14, 150]` - variância grande demais para confiar numa média/mediana simples, provavelmente combinando o crescimento do treino (`TimeSeriesSplit` com janela expansiva) com a heterogeneidade temporal já identificada na EDA (Seção 5.3-5.4). Abordagem descartada.
 
-Assim, reservamos uma fatia final do Treino (últimos 15%, por ordem temporal) como validação interna, só para decidir `iterations` no volume de dado real do refit — não para folds menores e heterogêneos entre si. Resultado: `best_iteration = 128`.
+Assim, reservamos uma fatia final do Treino (últimos 15%, por ordem temporal) como validação interna, só para decidir `iterations` no volume de dado real do refit - não para folds menores e heterogêneos entre si. Resultado: `best_iteration = 128`.
 
 <p align="center">
   <img src="images/section_09_graph_learning_curve.jpeg" width="800">
 </p>
 
-Foi verificado a possibilidade de overfitting, mas a curva de Treino continua caindo após a iteração 128 enquanto a curva de Validação estabiliza por volta dessa mesma iteração (~log loss 0,345) — o padrão esperado de um ponto de corte bem escolhido, sem sinal de early stopping disparado por ruído momentâneo nem de overfitting além do ponto escolhido.
+Foi verificado a possibilidade de overfitting, mas a curva de Treino continua caindo após a iteração 128 enquanto a curva de Validação estabiliza por volta dessa mesma iteração (~log loss 0,345) - o padrão esperado de um ponto de corte bem escolhido, sem sinal de early stopping disparado por ruído momentâneo nem de overfitting além do ponto escolhido.
 
 Foi feito o refit final no `CatBoostClassifier` com `best_params` (Seção 7) + `iterations=128` (fixo, sem early stopping), treinado no `X_train` completo (as fatias usadas na sonda voltam a fazer parte do treino final).
 
-O modelo foi salvo em `artifacts/models/catboost_final_v1.cbm` (formato nativo do CatBoost, via `save_model`/`load_model` — mais robusto a mudança de versão da biblioteca do que serialização genérica via `pickle`/`joblib`).
+O modelo foi salvo em `artifacts/models/catboost_final_v1.cbm` (formato nativo do CatBoost, via `save_model`/`load_model` - mais robusto a mudança de versão da biblioteca do que serialização genérica via `pickle`/`joblib`).
 
 ## 10. Calibração de Probabilidade
 
@@ -511,4 +511,78 @@ O reliability diagram mostra a curva do modelo levemente acima da diagonal de ca
 
 O Brier Skill Score (0,4699) confirma que o modelo reduz o erro de probabilidade em quase metade comparado a simplesmente prever a prevalência geral para todo mundo, reforçando que a miscalibração observada é pequena em magnitude, não um sinal de modelo ruim.
 
-Como o uso final da probabilidade é decidir um limiar de corte via custo (Seção 11), não expor o número bruto diretamente ao usuário, decidimos não aplicar correção via Platt scaling ou regressão isotônica. O ganho seria marginal frente à complexidade adicional de mais uma etapa de ajuste no pipeline. Fica documentado como decisão consciente, revisitável se o uso do modelo mudar para expor a probabilidade diretamente — por exemplo, em faixas de risco num dashboard (Seção 16).
+Como o uso final da probabilidade é decidir um limiar de corte via custo (Seção 11), não expor o número bruto diretamente ao usuário, decidimos não aplicar correção via Platt scaling ou regressão isotônica. O ganho seria marginal frente à complexidade adicional de mais uma etapa de ajuste no pipeline. Fica documentado como decisão consciente, revisitável se o uso do modelo mudar para expor a probabilidade diretamente - por exemplo, em faixas de risco num dashboard (Seção 16).
+
+## 11. Escolha do Limiar de Decisão
+
+Com o modelo final calibrado (Seção 10) partimos para a escolha do limiar de decisão, usando a estrutura de custo definida no problem framing (Seção 5.3): custo de Falso Positivo (contato + desconto) de USD 112,90, custo de Falso Negativo (valor perdido médio da reserva) de USD 231,01, e custo de Verdadeiro Positivo (contato + desconto menos o retorno esperado da conversão) de USD 101,35, com Verdadeiro Negativo custando zero.
+
+A fórmula fechada do playbook (Seção 11) devolveu um limiar de 0,4655. Buscando empiricamente o limiar que minimiza o custo total nas mesmas previsões out-of-fold usadas na calibração, encontramos um ótimo em 0,39, mais baixo que o da fórmula. A diferença é consistente com a leve subconfiança do modelo já identificada no reliability diagram (Seção 10): como o modelo tende a prever uma probabilidade um pouco menor que a frequência real observada na faixa intermediária, a fórmula fechada, que assume calibração perfeita, acaba sugerindo um corte mais alto do que o que realmente minimiza custo. Optamos pelo limiar empírico (0,39) como oficial, por não depender dessa suposição de calibração perfeita se sustentar.
+
+<p align="center">
+  <img src="images/section_11_graph_threshold_cost.jpeg" width="700">
+</p>
+
+Vale notar que a curva de custo é bastante achatada entre aproximadamente 0,30 e 0,50 - a economia do limiar ótimo frente ao default de 0,5 é real, mas modesta (USD 92.386,87, cerca de 2,1% de redução no custo total avaliado no conjunto out-of-fold), o que indica que a decisão não é frágil a pequenas variações no limiar escolhido.
+
+O limiar de 0,39 fica fixado para a avaliação final no Teste (Seção 12), decidido inteiramente em previsões out-of-fold, nunca no próprio Teste, conforme a regra de ouro do playbook (Seção 6).
+
+## 12. Avaliação Final no Teste
+
+Única avaliação no Teste, conforme a regra de ouro do playbook (Seção 6) - nenhum ajuste de modelo, hiperparâmetro ou limiar feito a partir deste resultado.
+
+**Métricas pontuais**: AUC = 0,8838 (IC 95% via bootstrap, 2000 reamostras: [0,8795; 0,8878]), AUPRC = 0,7857, Log Loss = 0,3932. O IC via bootstrap reamostra linha a linha, não por grupo de reserva - uma limitação herdada da ausência de um ID de grupo explícito no dataset (Seção 3.2), que pode subestimar levemente a variância real dado o ~27% de duplicatas identificado.
+
+A AUC no Teste ficou discretamente abaixo da média de CV (0,9005, Seção 6.2), consistente com o resíduo de viés temporal já documentado desde a Seção 6 - nenhum sinal de "bom demais pra ser verdade" (bem distante do limiar de 0,95 que pediria investigação de vazamento).
+
+**Comparação com baseline**: Regressão Logística simples, mesmo Teste, AUC = 0,8485 - ganho incremental do CatBoost de +0,0353 de AUC.
+
+**Matriz de confusão** (limiar = 0,39): VN=14.542, FP=1.968, FN=2.563, VP=5.354. Precision=0,7312, Recall=0,6763, F1=0,7027. Em linguagem de negócio: de 7.917 reservas que realmente seriam canceladas no período de Teste, o modelo identificou 5.354 (67,6%), permitindo tentativa de reversão; 2.563 cancelamentos passaram despercebidos, e 1.968 alarmes falsos geraram contato/desconto desnecessário.
+
+<p align="center">
+  <img src="images/section_12_graph_confusion_matrix.jpeg" width="500">
+</p>
+
+**Tradução em custo** (estrutura da Seção 11): custo total no Teste com o modelo = USD 1.356.891,05, contra USD 1.828.906,17 sem nenhuma estratégia de retenção - redução de USD 472.015,12 (25,8%). O limiar otimizado por custo (0,39) economiza USD 21.486,43 adicionais frente ao limiar ingênuo 0,5, um ganho real porém pequeno, consistente com a curva achatada já observada na Seção 11.
+
+**Análise de erro por segmento**: a maioria dos recortes (`customer_type`, a maior parte de `market_segment`, ambos os hotéis) tem recall na faixa de 0,55-0,95, sem surpresas. `deposit_type=non_refund` confirma fora da amostra a separação quase-perfeita já identificada na EDA (recall e precision próximos de 1,0, n=1.296).
+
+O achado relevante está em `market_segment=direct` (n=3.524, volume real, não é segmento pequeno): recall de apenas 0,209, o pior entre os segmentos com volume suficiente pra confiar na magnitude. Duas hipóteses foram checadas e descartadas antes de chegar na explicação real: (1) sobreposição com `required_car_parking_spaces>0` - zero dos 386 falsos negativos tinham essa feature marcada; (2) perfil de covariáveis atipicamente "seguro" nesse segmento - o perfil de `lead_time`, `previous_cancellations` e `deposit_type` dos falsos negativos em `direct` é quase idêntico ao do resto do Teste.
+
+A causa real: `direct` tem taxa de cancelamento real de apenas 13,85% (contra 32,41% de prevalência geral do Teste) - um segmento de risco de base genuinamente mais baixo. O modelo reflete isso corretamente mesmo nos casos que de fato cancelam (probabilidade média prevista de 0,266 em `direct` entre os que cancelaram, contra 0,618 no restante do Teste nos mesmos casos) - não é erro de calibração nem falta de sinal, é o limiar único global (0,39, calibrado pela mistura de custo de todo o Teste) interagindo mal com um segmento de prevalência atipicamente baixa. Casos de `direct` raramente atingem esse corte, mesmo quando realmente cancelariam.
+
+**Limitação documentada e recomendação futura**: um limiar único global é subótimo para segmentos com prevalência de base muito diferente da média. O playbook (Seção 11) já lista a alternativa - múltiplas faixas de risco ou limiar por segmento, em vez de um corte único - como refinamento natural de um próximo ciclo, não implementado nesta versão para manter o escopo do projeto de portfólio controlado.
+
+Achados menores, com amostra pequena (n<200) e por isso não extrapoláveis com confiança: `market_segment=complementary` (recall 0), `aviation` (recall 0,190) e `customer_type=group` (recall 0,125) - padrão consistente de baixo recall em segmentos de volume baixo, mas magnitude exata não confiável dado o n reduzido.
+
+## 13. Checklist Final de Projeto
+
+Revisão item a item contra o checklist do playbook (Seção 17), com status honesto - incluindo onde houve simplificação consciente, não só os itens cumpridos integralmente.
+
+**✅ Cumprido integralmente**
+
+- Problema, unidade de análise e critério de sucesso documentados antes da modelagem (problem-framing-documentation.md), incluindo estrutura de custo FP/FN travada antes de qualquer decisão de limiar.
+- Split Treino/Teste definido por OOT (corte em 2017-01-01) antes de qualquer EDA supervisionada - ordem de execução seguida à risca (checagem grosseira → split → EDA/features dentro do que sobrou).
+- Qualidade de dado checada com decisões justificadas e investigadas caso a caso (duplicatas, outliers, nulos) - nenhuma decisão tomada por "regra de bolso" sem checar a causa real (ex: duplicata investigada e atribuída a reserva em grupo, não erro).
+- EDA com poder discriminativo univariado (AUC/IV), estabilidade temporal e validação adversarial - incluindo descoberta e correção de viés de seleção no próprio `booking_date` (Seção 3).
+- Checagem de vazamento ativa e repetida ao longo do projeto, não só no fim: `assigned_room_type` (processo), `reservation_status*` (target direto), `arrival_date_year` (não-generalização via VIF+adversarial), `distribution_channel` (redundância via Cramér's V).
+- Pelo menos 3 modelos comparados (XGBoost/LightGBM/CatBoost) com justificativa de família, e teste formal (Nadeau-Bengio) antes de declarar vencedor - decisão por critério prático documentado (menor variância + encoding nativo), não por diferença estatisticamente comprovada.
+- Tuning documentado (Optuna, espaço de busca, resultado, observação de que o ótimo não ficou na borda).
+- Calibração verificada via reliability diagram + Brier Skill Score em previsões out-of-fold - desvio pequeno encontrado e documentado, decisão consciente de não corrigir.
+- Limiar escolhido em previsões out-of-fold, com critério de custo explícito (não F1/Youden "neutro") - e o gap entre fórmula fechada e ótimo empírico foi investigado e explicado, não ignorado.
+- Teste tocado uma única vez, com métrica pontual + IC via bootstrap + comparação a baseline (Regressão Logística) + análise de erro por segmento aprofundada (achado de `market_segment=direct` investigado até a causa raiz, não só reportado).
+- Limitações documentadas com causa identificada, não só listadas soltas (ex: variância do early stopping por fold, bootstrap não cluster, limiar único global penalizando segmento de baixa prevalência).
+
+**⚠️ Feito com simplificação consciente, documentada**
+
+- Seleção de features (Seção 5): AUC/IV univariados foram calculados **uma vez** no Treino completo, não recalculados dentro de cada fold de CV - o playbook (Seção 5.1) recomenda rodar dentro do fold para seleção supervisionada rigorosa. Aceito como simplificação para este projeto porque os cortes (AUC≥0,52, IV≥0,02) são bem folgados em relação ao ruído esperado entre folds - mas é uma divergência do protocolo ideal, registrada aqui para não passar despercebida.
+- Intervalo de confiança do Teste (bootstrap): reamostragem linha a linha, não cluster bootstrap por grupo de reserva - não existe ID de grupo explícito no dataset para viabilizar a versão correta.
+- Custo de Falso Negativo/Verdadeiro Positivo usado de forma **média/blended** (36%/1% cancelamento prévio/no-show), não dependente do exemplo - porque a informação que distingue os dois tipos (`reservation_status`) é a mesma excluída por leakage; não é observável no momento da previsão.
+
+**❌ Não feito, com justificativa**
+
+- Auditoria de fairness (Seção 14): não há atributo sensível disponível ou relevante no dataset (não há raça/gênero/idade do hóspede, por exemplo) - item não aplicável ao escopo real deste dataset específico, mas vale deixar registrado que a ausência não foi uma omissão, foi avaliada.
+- Plano de monitoramento pós-deploy, versionamento formal e critério de retraining (Seção 15, MLOps): fora do escopo desta fase - depende da etapa de deploy (Docker), que será tratada separadamente, como entrega própria do curso.
+- Comunicação executiva formal (Seção 16, dashboard/apresentação): os elementos (tradução de custo, matriz de confusão em linguagem de negócio) já foram produzidos ao longo do workbook, mas não consolidados ainda num artefato de comunicação único - pendente, não urgente para o escopo de portfólio técnico.
+
+**Conclusão**: a implementação do modelo (problema → dado → EDA → features → modelagem → tuning → calibração → limiar → avaliação final) está completa e documentada de ponta a ponta, com as simplificações conscientes listadas acima - nenhuma delas feita por desconhecimento, todas avaliadas e justificadas no momento em que a decisão foi tomada.
