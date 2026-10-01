@@ -483,3 +483,18 @@ de não usar métricas que embutem decisão de corte durante o tuning. CV: mesmo
 
 A célula de tuning mantida no notebook, porém comentada, os hiperparâmetros vencedores foram hardcoded numa célula separada (`best_params`), para evitar re-executar uma busca de ~1h a cada vez que o notebook roda do zero. Reabrir o tuning só se houver mudança relevante no espaço de features, na métrica de otimização, ou na estratégia de CV.
 
+## 9. Treinamento do Modelo Final
+
+Durante o tuning (Seção 7), cada fold decidiu seu próprio `best_iteration` via early stopping, mas essa informação não foi capturada trial a trial — só o log loss médio. Uma primeira tentativa de recuperar isso rodando a função objetivo uma única vez com `best_params` fixo resultou em `best_iteration` por fold = `[45, 179, 22, 14, 150]` — variância grande demais para confiar numa média/mediana simples, provavelmente combinando o crescimento do treino (`TimeSeriesSplit` com janela expansiva) com a heterogeneidade temporal já identificada na EDA (Seção 5.3-5.4). Abordagem descartada.
+
+Assim, reservamos uma fatia final do Treino (últimos 15%, por ordem temporal) como validação interna, só para decidir `iterations` no volume de dado real do refit — não para folds menores e heterogêneos entre si. Resultado: `best_iteration = 128`.
+
+<p align="center">
+  <img src="images/section_09_graph_learning_curve.jpeg" width="800">
+</p>
+
+Foi verificado a possibilidade de overfitting, mas a curva de Treino continua caindo após a iteração 128 enquanto a curva de Validação estabiliza por volta dessa mesma iteração (~log loss 0,345) — o padrão esperado de um ponto de corte bem escolhido, sem sinal de early stopping disparado por ruído momentâneo nem de overfitting além do ponto escolhido.
+
+Foi feito o refit final no `CatBoostClassifier` com `best_params` (Seção 7) + `iterations=128` (fixo, sem early stopping), treinado no `X_train` completo (as fatias usadas na sonda voltam a fazer parte do treino final).
+
+O modelo foi salvo em `artifacts/models/catboost_final_v1.cbm` (formato nativo do CatBoost, via `save_model`/`load_model` — mais robusto a mudança de versão da biblioteca do que serialização genérica via `pickle`/`joblib`).
