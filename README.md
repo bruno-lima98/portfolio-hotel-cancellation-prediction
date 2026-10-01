@@ -2,9 +2,25 @@
 
 A machine learning project that predicts whether a hotel reservation will be canceled at the time of booking, enabling targeted retention campaigns before the cancellation happens.
 
-This is a portfolio / course project (ML Zoomcamp). Full methodology, every decision log, and the complete EDA live in [`work-book-documentation.md`](work-book-documentation.md) and [`problem-framing-documentation.md`](problem-framing-documentation.md) — this README is a condensed summary.
+This is a portfolio / course project (ML Zoomcamp). Full methodology, every decision log, and the complete EDA live in [`work-book-documentation-en.md`](work-book-documentation-en.md) and [`problem-framing-documentation.md`](problem-framing-documentation.md) — this README is a condensed summary.
 
-**About the methodology:** the whole project was built following a personal data science methodology framework — a structured playbook plus a decision log, meant to be reused across projects regardless of domain. This project also served as a real-world test of that framework. The methodology repo is public here: [Methodology Repo](https://github.com/bruno-lima98/data-science-work-methodology).
+**About the methodology:** the whole project was built following a personal data science methodology framework — a structured playbook plus a decision log, meant to be reused across projects regardless of domain. This project also served as a real-world test of that framework. The methodology repo is public here: [Methodology](https://github.com/bruno-lima98/data-science-work-methodology).
+
+## Live demo
+
+The prediction service is deployed and publicly reachable:
+
+```
+https://portfolio-hotel-cancellation-prediction.onrender.com
+```
+
+```bash
+curl -X POST https://portfolio-hotel-cancellation-prediction.onrender.com/predict \
+  -H "Content-Type: application/json" \
+  -d @tests/sample_will_cancel.json
+```
+
+> Running on Render's free tier: if the service has been idle for a while, the first request can take 30–50s to respond (cold start). Subsequent requests are fast.
 
 ## Problem
 
