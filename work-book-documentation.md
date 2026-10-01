@@ -345,11 +345,68 @@ Optamos por Spearman em vez de Pearson por já termos visto relações não-line
 
 ### 5.6. Associação entre Features Categóricas (Cramér's V)
 
-Equivalente categórico da análise de correlação/VIF do 4.1 - avalia redundância entre as próprias features, não feature vs. target. Excluímos `agent`, `country` e `company` do teste par-a-par por alta cardinalidade, que infla o Cramér's V de forma não confiável (mesmo viés de amostra pequena por célula já visto no IV mensal, Seção 5.3).
+Equivalente categórico da análise de correlação/VIF do 4.1 - avalia redundância entre as próprias features, não feature vs. target.
 
-**Achados**:
-- `assigned_room_type` × `reserved_room_type` (0,725) e `assigned_room_type` × `hotel` (0,398): esperados, mas irrelevantes para decisão - `assigned_room_type` já excluído por vazamento de processo (Seção 5.1).
+**Correção de método (rodada 2)**: a primeira versão excluía `agent`, `country` e `company` do teste por suspeita de inflação do V em alta cardinalidade. Em vez de excluir, aplicamos a correção formal (Cohen, 1988): o limiar de "associação grande" não é fixo - encolhe com o grau de liberdade (`limiar_grande = 0,5/√df`, `df = min(categorias_1 - 1, categorias_2 - 1)`). Isso expôs um problema (`country` × `company` = 0,077 passava como "grande" só por ter `df` enorme - 165 - tornando qualquer V acima de ~0,04 "estatisticamente grande", mesmo sendo desprezível na escala natural). Corrigido com **dois filtros simultâneos**: o limiar ajustado por `df` (estatístico) **e** um piso fixo de 0,5 (prático, independente de `df`), exigindo os dois para marcar redundância real.
+
+**Achados confirmados (passam nos dois filtros)**:
+- `reserved_room_type` × `assigned_room_type` (0,725): esperado, irrelevante para decisão - `assigned_room_type` já excluído por vazamento de processo (Seção 5.1).
 - `market_segment` × `distribution_channel` (0,683): redundância real. `market_segment` tem IV bem maior (0,276 vs. 0,130), sugerindo que carrega a maior parte da informação de forma mais granular.
-- `deposit_type` × `market_segment` (0,362): reforça a hipótese já levantada nas investigações de duplicatas/`adults>5` - `non_refund` concentrado em segmentos específicos de mercado (reserva em bloco/agência).
+- `meal` × `agent` (0,508): irrelevante para decisão - `meal` já excluído pelo corte de IV (Seção 5.1.1, IV=0,0148 < 0,02).
+- `hotel` × `agent` (0,880), `distribution_channel` × `agent` (0,715), `market_segment` × `agent` (0,635), `market_segment` × `company` (0,546): `agent`/`company` resumem parcialmente informação de features mais agregadas (um agente tende a concentrar hotel/canal/segmento específicos) - faz sentido de negócio, não indica erro. Reforça (mas não é a única evidência de) a decisão de remover `distribution_channel`: ele é redundante tanto com `market_segment` quanto com `agent`.
 
-**Decisão**: sem ação forçada agora - para GBM, associação entre categóricas não compromete predição, só parcimônia. Fica registrado como consideração de simplicidade para a Seção 6 (seleção de features): `distribution_channel` é candidata a remoção por redundância com `market_segment`, a decidir formalmente lá.
+**Nota perdida na primeira versão, mas que ainda vale**: `deposit_type` × `market_segment` (0,362) também passa como redundância "grande" pelo limiar ajustado - confirma formalmente a hipótese já levantada nas investigações de duplicatas/`adults>5` (`non_refund` concentrado em segmentos específicos de mercado). Não passa no piso prático de 0,5, então fica como achado qualitativo confirmado, não como redundância "forte" pelos dois critérios.
+
+**Decisão**: sem ação forçada para a maioria - para GBM, associação entre categóricas não compromete predição, só parcimônia. `agent`/`company` mantidos apesar da redundância parcial, pois carregam sinal próprio (segundo e oitavo maior IV da tabela) em granularidade mais fina que as features agregadas - redundância parcial não é informação idêntica. `distribution_channel` confirmado para remoção (Seção 6), agora com duas fontes independentes de redundância (`market_segment` e `agent`), não apenas uma.
+
+### 5.7. Lista Final de Features (Consolidação)
+
+Lista final obtida aplicando, sobre `lista_features` (corte estatístico AUC≥0,52/IV≥0,02, Seção 5.1.1), as exclusões de julgamento acumuladas ao longo da Seção 5:
+
+```python
+drop_columns = {
+    "assigned_room_type": "process leakage (Section 5.1.1) -- only exists after check-in",
+    "arrival_date_year": "does not generalize (future years never seen in train) + contributed to inflated adversarial AUC (Section 5.4) + VIF=23.1 (Section 5.5)",
+    "distribution_channel": "redundant with market_segment (Cramér's V=0.683, Section 5.6) -- market_segment has greater IV (0.276 vs 0.130)",
+}
+```
+
+**Numéricas finais (10)**: `lead_time`, `total_of_special_requests`, `booking_changes`, `previous_cancellations`, `required_car_parking_spaces`, `adr`, `arrival_date_week_number`, `adults`, `days_in_waiting_list`, `stays_in_week_nights`
+
+**Categóricas finais (9)**: `deposit_type`, `agent`, `country`, `market_segment`, `customer_type`, `company`, `hotel`, `reserved_room_type`, `arrival_date_month`
+
+**Pendências de feature engineering para a Seção 7 (não são exclusões, são transformações já decididas)**:
+- `days_in_waiting_list` → recodificar como binária (`was_on_waiting_list`), decil não captura a relação (Seção 5.2).
+- `booking_changes` → agrupar valores ≥6 (amostra muito pequena e instável por valor individual, Seção 5.2).
+- `previous_cancellations` → agrupar valores ≥2; considerar ainda a instabilidade temporal confirmada (Seção 5.4 — concentração em blocos de 2015, quase ausência em 2016) antes de decidir se entra como está ou com ressalva de monitoramento.
+- `agent`, `company` (alta cardinalidade, 304/303 categorias) → encoding nativo do GBM ou `TargetEncoder` com cross-fitting na Seção 7; nunca one-hot.
+- `deposit_type` → atenção à calibração (Seção 8.3), dado o padrão de quase-separação perfeita em `non_refund` (IV=2,04).
+- `required_car_parking_spaces` → atenção à calibração (Seção 8.3), dado o padrão de 0% de cancelamento cravado no subgrupo investigado.
+
+## 6. Modelagem
+
+### 6.1. Modelo Base (Regressão Logística)
+
+Regressão Logística como baseline de comparação (Seção 8.4 do playbook - comparar só contra `DummyClassifier` é pouco informativo, já que AUC=0,5 por construção; o baseline que importa é regra de negócio atual e/ou modelo linear simples).
+
+**Pipeline**: `StandardScaler` nas numéricas (necessário para Regressão Logística, já que a regularização L2 padrão do sklearn depende da escala - Seção 5.4) + `OneHotEncoder(min_frequency=0.01, handle_unknown="infrequent_if_exist")` nas categóricas (agrupa automaticamente categorias raras de `agent`/`country`/`company` numa coluna `infrequent`, em vez de explodir dimensionalidade - reduziu `agent` de 304 categorias para 15 colunas geradas).
+
+**Avaliação**: `cross_validate` com `TimeSeriesSplit(n_splits=5)` (mesmo CV decidido na Seção 4.2), métricas sem dependência de limiar (`roc_auc`, `average_precision`, `neg_log_loss` - F1 evitado de propósito, por misturar qualidade do modelo com escolha de limiar, que só é decidida na Seção 11).
+
+**Resultado (AUC por fold)**: `[0.960, 0.818, 0.835, 0.836, 0.877]` - média 0,8655, desvio-padrão 0,0511.
+
+**Investigação do Fold 0 (anômalo)**: AUC de 0,960 contra 0,82-0,88 nos demais. Investigado cruzando a composição do fold de validação (set-dez/2015) com as três features mais fortes e mais suspeitas de instabilidade temporal (Seção 5.3/5.4):
+
+| | Fold 0 | Demais folds |
+|---|---|---|
+| `previous_cancellations==1` | 15,3% | 0,2-0,4% |
+| `days_in_waiting_list>0` | 11,5% | 0,2-2,6% |
+| `deposit_type=non_refund` | 19,4% | 2,5-13,8% |
+
+Confirma a hipótese: o Fold 0 concentra muito mais casos de sinal quase-determinístico (ambas as features citadas têm taxa de cancelamento >90% em sua categoria/valor extremo) do que os demais - o problema fica artificialmente mais fácil nesse recorte específico do tempo, não é capacidade superior do modelo.
+
+**Decisão de leitura**: a média simples (0,8655) deve ser lida com ressalva - está inflada pelo Fold 0. O desempenho esperado em produção está mais próximo da faixa dos Folds 1-4 (0,82-0,88). Reportar sempre a distribuição completa por fold (ou ao menos média + desvio-padrão), nunca só a média isolada, para esse e para os próximos modelos comparados.
+
+<p align="center">
+  <img src="images/section_07_graph_01_baseline_model_metrics.jpeg" width="1200">
+</p>
