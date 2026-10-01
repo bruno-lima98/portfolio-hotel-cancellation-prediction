@@ -465,6 +465,10 @@ de não usar métricas que embutem decisão de corte durante o tuning. CV: mesmo
 
 **Resultado:** melhor trial (#8 de 30) — log loss médio = **0,3734**
 
+<p align="center">
+  <img src="images/section_08_graph_optuna_resultados_catboost_tuning.jpeg" width="1200">
+</p>
+
 | Hiperparâmetro | Valor |
 |---|---|
 | learning_rate | 0,0943 |
